@@ -1,4 +1,4 @@
-package io.turntabl.ordervalidator;
+package io.turntabl;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

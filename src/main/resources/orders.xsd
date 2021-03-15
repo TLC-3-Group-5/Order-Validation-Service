@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="http://www.turntabl.io/producer/clientOrders"
+            xmlns:tns="http://www.turntabl.io/producer/clientOrders"
+            elementFormDefault="qualified">
+
+    <xsd:element name="OrderRequest">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element name="portfolioId" type="xsd:int" />
+                <xsd:element name="product" type="xsd:string" />
+                <xsd:element name="quantity" type="xsd:int" />
+                <xsd:element name="price" type="xsd:double" />
+                <xsd:element name="side" type="xsd:string" />
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+
+    <xsd:element name="OrderResponse">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element name="isOrderValid" type="xsd:boolean" />
+                <xsd:element name="message" type="xsd:string" />
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+</xsd:schema>
