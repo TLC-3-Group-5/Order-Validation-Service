@@ -25,4 +25,8 @@ public class MarketDataService {
   public List<MarketData> appendData(List<MarketData> data) {
     return marketDataRepository.saveAll(data);
   }
+
+  public MarketData getMarketDataByTicker(String product){
+    return marketDataRepository.findByTicker(product).orElse(null);
+  }
 }
