@@ -1,5 +1,6 @@
 package io.turntabl.producer.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.turntabl.producer.clientorders.OrderRequest;
 import io.turntabl.producer.clientorders.OrderResponse;
 
@@ -7,18 +8,23 @@ import io.turntabl.producer.resources.model.MarketData;
 import io.turntabl.producer.resources.model.OwnedStock;
 import io.turntabl.producer.resources.model.OwnedStockList;
 import io.turntabl.producer.resources.service.MarketDataService;
+import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.core.env.Environment;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import redis.clients.jedis.Jedis;
 
 @Service
 public class ClientOrdersService {
 
     private final MarketDataService marketDataService;
 
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
     @Autowired
     private RestTemplate restTemplate;
+
 
     @Autowired
     Environment env;
@@ -44,14 +50,26 @@ public class ClientOrdersService {
         //TODO Check BidPrice in the validation
         if(request.getSide().equals("BUY")) {
             if(balance!= 0 && (request.getPrice() * request.getQuantity()) <=balance){
-                if(marketData.getBuyLimit()>0){
-                    if(request.getQuantity()<marketData.getBuyLimit()){
-                        //TODO Push order to Trade Engine via Content Pub/Sub
-                        response.setIsOrderValid(true);
-                        response.setMessage("Client order is valid");
+                if(marketData!=null){
+                    if(marketData.getBuyLimit()>0){
+                        if(request.getQuantity()<marketData.getBuyLimit()){
+
+                            try{
+                                Jedis client = new Jedis("localhost", 6379);
+                                client.publish("orders", objectMapper.writeValueAsString(request));
+                            }catch(Exception e){
+                                e.printStackTrace();
+                            }
+
+                            response.setIsOrderValid(true);
+                            response.setMessage("Client order is valid");
+                        }else{
+                            response.setIsOrderValid(false);
+                            response.setMessage("Your requested quantity is greater than the buy limit");
+                        }
                     }else{
                         response.setIsOrderValid(false);
-                        response.setMessage("Your requested quantity is greater than the buy limit");
+                        response.setMessage("Product is unavailable");
                     }
                 }else{
                     response.setIsOrderValid(false);
