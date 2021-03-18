@@ -1,12 +1,13 @@
 package io.turntabl.producer.resources.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
-//@Table
-//@Entity(name="Orders")
+@Table
+@Entity(name="Orders")
 public class Orders {
     @Id
     @SequenceGenerator(
@@ -40,8 +41,9 @@ public class Orders {
     @JsonBackReference
     private Portfolio portfolio;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalDateTime createdAt;
-
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalDateTime updatedAt;
 
     public Orders() {

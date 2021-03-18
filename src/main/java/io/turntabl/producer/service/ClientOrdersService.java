@@ -5,9 +5,12 @@ import io.turntabl.producer.clientorders.OrderRequest;
 import io.turntabl.producer.clientorders.OrderResponse;
 
 import io.turntabl.producer.resources.model.MarketData;
+import io.turntabl.producer.resources.model.Orders;
 import io.turntabl.producer.resources.model.OwnedStock;
 import io.turntabl.producer.resources.model.OwnedStockList;
 import io.turntabl.producer.resources.service.MarketDataService;
+import io.turntabl.producer.resources.service.OrderService;
+import io.turntabl.producer.resources.service.PortfolioService;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.core.env.Environment;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,10 +18,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import redis.clients.jedis.Jedis;
 
+import java.time.LocalDateTime;
+
 @Service
 public class ClientOrdersService {
 
     private final MarketDataService marketDataService;
+
+    @Autowired
+    private  final PortfolioService portfolioService;
+
+    @Autowired
+    private  final OrderService orderService;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -30,8 +41,10 @@ public class ClientOrdersService {
     Environment env;
 
     @Autowired
-    public ClientOrdersService(MarketDataService marketDataService) {
+    public ClientOrdersService(MarketDataService marketDataService, PortfolioService portfolioService, OrderService orderService) {
         this.marketDataService = marketDataService;
+        this.portfolioService = portfolioService;
+        this.orderService = orderService;
     }
 
     public OrderResponse checkOrderValidity(OrderRequest request){
@@ -47,20 +60,30 @@ public class ClientOrdersService {
 
         MarketData marketData = marketDataService.getMarketDataByTicker(request.getProduct());
 
+        System.out.println(marketData);
         //TODO Check BidPrice in the validation
         if(request.getSide().equals("BUY")) {
             if(balance!= 0 && (request.getPrice() * request.getQuantity()) <=balance){
                 if(marketData!=null){
                     if(marketData.getBuyLimit()>0){
                         if(request.getQuantity()<marketData.getBuyLimit()){
+                            int counter = 0;
+                            Orders orders = new Orders();
+                            orders.setStatus("OPEN");
+                            orders.setSide(request.getSide());
+                            orders.setProduct(request.getProduct());
+                            orders.setCreatedAt(LocalDateTime.now());
+                            orders.setPrice(request.getPrice());
+                            orders.setQuantity(request.getQuantity());
+                            orders.setPortfolio(portfolioService.getPortfolio((long) request.getPortfolioId()));
+                            orderService.createOrders(orders);
 
                             try{
                                 Jedis client = new Jedis("localhost", 6379);
-                                client.publish("orders", objectMapper.writeValueAsString(request));
+                                client.publish("orders", objectMapper.writeValueAsString(orders));
                             }catch(Exception e){
                                 e.printStackTrace();
                             }
-
                             response.setIsOrderValid(true);
                             response.setMessage("Client order is valid");
                         }else{
@@ -69,7 +92,7 @@ public class ClientOrdersService {
                         }
                     }else{
                         response.setIsOrderValid(false);
-                        response.setMessage("Product is unavailable");
+                        response.setMessage("Product is unavailable no limit");
                     }
                 }else{
                     response.setIsOrderValid(false);

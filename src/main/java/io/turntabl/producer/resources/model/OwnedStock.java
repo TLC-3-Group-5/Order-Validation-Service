@@ -4,7 +4,8 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import javax.persistence.*;
 
-
+@Table
+@Entity(name="OwnedStock")
 public class OwnedStock {
     @Id
     @SequenceGenerator(

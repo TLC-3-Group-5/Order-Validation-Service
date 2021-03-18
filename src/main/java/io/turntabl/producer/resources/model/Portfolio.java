@@ -6,8 +6,8 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import javax.persistence.*;
 import java.util.List;
 
-//@Table
-//@Entity(name="Portfolio")
+@Table
+@Entity(name="Portfolio")
 public class Portfolio {
     @Id
     @SequenceGenerator(

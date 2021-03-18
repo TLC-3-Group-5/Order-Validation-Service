@@ -6,8 +6,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.persistence.*;
 import java.util.List;
 
-//@Table
-//@Entity(name="Client")
+@Table
+@Entity(name="Client")
 public class Client {
     @Id
     @SequenceGenerator(
