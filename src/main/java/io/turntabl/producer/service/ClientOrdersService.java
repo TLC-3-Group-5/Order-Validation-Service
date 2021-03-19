@@ -67,7 +67,6 @@ public class ClientOrdersService {
                 if(marketData!=null){
                     if(marketData.getBuyLimit()>0){
                         if(request.getQuantity()<marketData.getBuyLimit()){
-                            int counter = 0;
                             Orders orders = new Orders();
                             orders.setStatus("OPEN");
                             orders.setSide(request.getSide());
@@ -114,6 +113,22 @@ public class ClientOrdersService {
                     if(request.getQuantity()<marketData.getSellLimit()){
 
                         //TODO Push order to Trade Engine via Content Pub/Sub
+                        Orders orders = new Orders();
+                        orders.setStatus("SELL");
+                        orders.setSide(request.getSide());
+                        orders.setProduct(request.getProduct());
+                        orders.setCreatedAt(LocalDateTime.now());
+                        orders.setPrice(request.getPrice());
+                        orders.setQuantity(request.getQuantity());
+                        orders.setPortfolio(portfolioService.getPortfolio((long) request.getPortfolioId()));
+                        orderService.createOrders(orders);
+
+                        try{
+                            Jedis client = new Jedis("localhost", 6379);
+                            client.publish("orders", objectMapper.writeValueAsString(orders));
+                        }catch(Exception e){
+                            e.printStackTrace();
+                        }
                         response.setIsOrderValid(true);
                         response.setMessage("Client order is valid");
                     }else{
