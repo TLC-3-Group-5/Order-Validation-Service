@@ -1,0 +1,52 @@
+# This workflow will build a Java project with Maven
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
+
+name: Java CI/CD with Maven
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml
+      - name: Upload built jar
+        uses: actions/upload-artifact@v2
+        with:
+          name: application-jar
+          path: target/*.jar
+
+  dockerize-push-release:
+    name: Dockerize, push and release
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Download built jar
+        uses: actions/download-artifact@v2
+        with:
+          name: application-jar
+          path: target
+      - name: Login to Heroku Container Registry
+        env: 
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: heroku container:login
+      - name: Build image and push
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: heroku container:push web -a ${{ secrets.HEROKU_APP_NAME }}
+      - name: Release
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: heroku container:release web -a ${{ secrets.HEROKU_APP_NAME }}
