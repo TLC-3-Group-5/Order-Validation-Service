@@ -38,7 +38,7 @@ public class ClientOrdersService {
 
 
     @Autowired
-    Environment env;
+    private Environment env;
 
     @Autowired
     public ClientOrdersService(MarketDataService marketDataService, PortfolioService portfolioService, OrderService orderService) {
