@@ -50,12 +50,12 @@ public class ClientOrdersService {
     public OrderResponse checkOrderValidity(OrderRequest request){
         OrderResponse response = new OrderResponse();
 
-        Double clientBalance = restTemplate.getForObject(env.getProperty("clientservice")
+        Double clientBalance = restTemplate.getForObject(env.getProperty("app.client_connectivity_service_url")
             .concat("/portfolio/client-balance/").concat(String.valueOf((request.getPortfolioId()))), Double.class);
 
         double balance = clientBalance != null ? clientBalance: 0;
 
-        OwnedStockList stockList = restTemplate.getForObject(env.getProperty("clientservice")
+        OwnedStockList stockList = restTemplate.getForObject(env.getProperty("app.client_connectivity_service_url")
                 .concat("/portfolio/client-stocks/").concat(String.valueOf((request.getPortfolioId()))), OwnedStockList.class);
 
         MarketData marketData = marketDataService.getMarketDataByTicker(request.getProduct());

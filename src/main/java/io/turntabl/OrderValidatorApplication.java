@@ -35,7 +35,7 @@ public class OrderValidatorApplication {
 			// subscribe to exchange
 			restTemplate.postForEntity(
 				"https://exchange.matraining.com/md/subscription",
-				env.getProperty("app.host").concat(MARKETDATAWEBHOOKPATH),
+				env.getProperty("app.host_url").concat(MARKETDATAWEBHOOKPATH),
 				null
 			);
 		};
