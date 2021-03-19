@@ -76,7 +76,7 @@ public class ClientOrdersService {
                             orders.setQuantity(request.getQuantity());
                             orders.setPortfolio(portfolioService.getPortfolio((long) request.getPortfolioId()));
                             orderService.createOrders(orders);
-
+                            System.out.println("printing");
                             try{
                                 Jedis client = new Jedis("localhost", 6379);
                                 client.publish("orders", objectMapper.writeValueAsString(orders));
