@@ -1,5 +1,7 @@
 package io.turntabl;
 
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -34,7 +36,7 @@ public class OrderValidatorApplication {
 			// * Use a webhook
 			// subscribe to exchange
 			restTemplate.postForEntity(
-				"https://exchange.matraining.com/md/subscription",
+				Optional.ofNullable(env.getProperty("app.MARKET_DATA_SUBSCRIPTION_API")).orElse(""),
 				env.getProperty("app.host_url").concat(MARKETDATAWEBHOOKPATH),
 				null
 			);
