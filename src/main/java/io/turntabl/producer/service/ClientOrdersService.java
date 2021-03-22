@@ -79,7 +79,7 @@ public class ClientOrdersService {
                             orderService.createOrders(orders);
 
                             try {
-                                Jedis client = new Jedis(env.getProperty("spring.redis.url"));
+                                Jedis client = new Jedis(env.getProperty("app.SPRING_REDIS_URL"));
                                 client.publish("orders", objectMapper.writeValueAsString(orders));
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -124,7 +124,7 @@ public class ClientOrdersService {
                         orderService.createOrders(orders);
 
                         try {
-                            Jedis client = new Jedis(env.getProperty("spring.redis.url"));
+                            Jedis client = new Jedis(env.getProperty("app.SPRING_REDIS_URL"));
                             client.publish("orders", objectMapper.writeValueAsString(orders));
                         } catch (Exception e) {
                             e.printStackTrace();
