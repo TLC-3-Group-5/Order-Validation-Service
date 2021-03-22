@@ -114,7 +114,7 @@ public class ClientOrdersService {
 
                         //TODO Push order to Trade Engine via Content Pub/Sub
                         Orders orders = new Orders();
-                        orders.setStatus("SELL");
+                        orders.setStatus("OPEN");
                         orders.setSide(request.getSide());
                         orders.setProduct(request.getProduct());
                         orders.setCreatedAt(LocalDateTime.now());
