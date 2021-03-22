@@ -79,7 +79,8 @@ public class ClientOrdersService {
                             orderService.createOrders(orders);
 
                             try {
-                                Jedis client = new Jedis(env.getProperty("app.SPRING_REDIS_URL"), env.getProperty("app.SPRING_REDIS_PORT"));
+                                Jedis client = new Jedis(env.getProperty("app.SPRING_REDIS_URL"),
+                                Integer.parseInt(env.getProperty("app.SPRING_REDIS_PORT")));
                                 client.auth(env.getProperty("app.SPRING_REDIS_PASS"));
                                 client.publish("orders", objectMapper.writeValueAsString(orders));
                             } catch (Exception e) {
@@ -125,7 +126,8 @@ public class ClientOrdersService {
                         orderService.createOrders(orders);
 
                         try {
-                            Jedis client = new Jedis(env.getProperty("app.SPRING_REDIS_URL"), env.getProperty("app.SPRING_REDIS_PORT"));
+                            Jedis client = new Jedis(env.getProperty("app.SPRING_REDIS_URL"),
+                                    Integer.parseInt(env.getProperty("app.SPRING_REDIS_PORT")));
                             client.auth(env.getProperty("app.SPRING_REDIS_PASS"));
                             client.publish("orders", objectMapper.writeValueAsString(orders));
                         } catch (Exception e) {
