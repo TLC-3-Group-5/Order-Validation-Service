@@ -142,7 +142,9 @@ public class ClientOrdersService {
                         variables.put("portfolioId", (long) request.getPortfolioId());
                         variables.put("product", request.getProduct());
 
-                        restTemplate.put("http://localhost:8081/portfolio/update-stock/{portfolioId}/{product}",
+                        restTemplate.put(
+                                Optional.ofNullable(env.getProperty("app.client_connectivity_service_url")).orElse("")
+                                        .concat("/portfolio/update-stock/{portfolioId}/{product}"),
                                 request.getQuantity(), variables);
 
                         try {

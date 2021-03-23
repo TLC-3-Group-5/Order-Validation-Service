@@ -5,7 +5,7 @@ name: Java CI/CD with Maven
 
 on:
   push:
-    branches: [configure-ci-cd]
+    branches: [staging]
 
 jobs:
   build:
