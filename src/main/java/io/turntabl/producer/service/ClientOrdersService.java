@@ -19,6 +19,8 @@ import org.springframework.web.client.RestTemplate;
 import redis.clients.jedis.Jedis;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class ClientOrdersService {
@@ -76,7 +78,13 @@ public class ClientOrdersService {
                             orders.setQuantity(request.getQuantity());
                             orders.setPortfolio(portfolioService.getPortfolio((long) request.getPortfolioId()));
                             orderService.createOrders(orders);
-                            System.out.println("printing");
+
+                            Double valueOfOrder = request.getQuantity() * request.getPrice();
+                            Map<String,Long> variables = new HashMap<>();
+                            variables.put("portfolioId", (long)request.getPortfolioId());
+
+                            restTemplate.put("http://localhost:8081/portfolio/update-balance/{portfolioId}", valueOfOrder , variables);
+
                             try{
                                 Jedis client = new Jedis("localhost", 6379);
                                 client.publish("orders", objectMapper.writeValueAsString(orders));
@@ -122,6 +130,12 @@ public class ClientOrdersService {
                         orders.setQuantity(request.getQuantity());
                         orders.setPortfolio(portfolioService.getPortfolio((long) request.getPortfolioId()));
                         orderService.createOrders(orders);
+
+                        Map<String,Object> variables = new HashMap<>();
+                        variables.put("portfolioId", (long)request.getPortfolioId());
+                        variables.put("product", request.getProduct());
+
+                        restTemplate.put("http://localhost:8081/portfolio/update-stock/{portfolioId}/{product}", request.getQuantity() , variables);
 
                         try{
                             Jedis client = new Jedis("localhost", 6379);
