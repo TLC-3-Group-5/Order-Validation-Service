@@ -1,10 +1,12 @@
 package io.turntabl.producer.resources.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Table
 @Entity(name="Orders")
@@ -46,7 +48,27 @@ public class Orders {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalDateTime updatedAt;
 
+    @JsonManagedReference
+    @OneToMany(mappedBy = "orders")
+    private List<Trade> tradeList;
+
     public Orders() {
+    }
+
+    @Override
+    public String toString() {
+        return "Orders{" +
+                "id=" + id +
+                ", product='" + product + '\'' +
+                ", quantity=" + quantity +
+                ", price=" + price +
+                ", status='" + status + '\'' +
+                ", side='" + side + '\'' +
+                ", portfolio=" + portfolio +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                ", tradeList=" + tradeList +
+                '}';
     }
 
     public Long getId() {
@@ -111,6 +133,18 @@ public class Orders {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
+    }
+
+    public List<Trade> getTradeList() {
+        return tradeList;
+    }
+
+    public void setTradeList(List<Trade> tradeList) {
+        this.tradeList = tradeList;
     }
 
     public LocalDateTime getUpdatedAt() {
