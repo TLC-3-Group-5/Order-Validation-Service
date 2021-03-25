@@ -1,19 +1,17 @@
 package io.turntabl.producer.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.turntabl.producer.clientorders.OrderRequest;
 import io.turntabl.producer.clientorders.OrderResponse;
-
-import io.turntabl.producer.resources.model.MarketData;
-import io.turntabl.producer.resources.model.Orders;
-import io.turntabl.producer.resources.model.OwnedStock;
-import io.turntabl.producer.resources.model.OwnedStockList;
+import io.turntabl.producer.resources.model.*;
 import io.turntabl.producer.resources.service.MarketDataService;
 import io.turntabl.producer.resources.service.OrderService;
 import io.turntabl.producer.resources.service.PortfolioService;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
-import org.springframework.core.env.Environment;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import redis.clients.jedis.Jedis;
@@ -34,13 +32,32 @@ public class ClientOrdersService {
     @Autowired
     private final OrderService orderService;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     @Autowired
     private RestTemplate restTemplate;
 
     @Autowired
     private Environment env;
+
+    @Value("${app.MARKET_DATA_EXCHANGE_1}")
+    private String exchangeOneMarketData;
+
+    @Value("${app.MARKET_DATA_EXCHANGE_2}")
+    private String exchangeTwoMarketData;
+
+    private int buyLimit;
+
+    private int sellLimit;
+
+    private double leastBidPrice;
+
+    private double maxBidPrice;
+
+    private double leastAskPrice;
+
+    private double maxAskPrice;
 
     @Autowired
     public ClientOrdersService(MarketDataService marketDataService, PortfolioService portfolioService,
@@ -64,41 +81,75 @@ public class ClientOrdersService {
 
         MarketData marketData = marketDataService.getMarketDataByTicker(request.getProduct());
 
-        System.out.println(marketData);
+        ExchangeMarketData marketData_1 = null;
+        try {
+            marketData_1 = objectMapper
+                    .readValue(restTemplate.getForObject(exchangeOneMarketData.concat(request.getProduct()), String.class),
+                            ExchangeMarketData.class);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
+        ExchangeMarketData marketData_2 = null;
+        try {
+            marketData_2 = objectMapper
+                    .readValue(restTemplate.getForObject(exchangeTwoMarketData.concat(request.getProduct()), String.class),
+                            ExchangeMarketData.class);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
+        if(marketData_1!=null && marketData_2!=null){
+            buyLimit = marketData_1.getBUY_LIMIT() + marketData_2.getBUY_LIMIT();
+            sellLimit = marketData_1.getSELL_LIMIT() + marketData_2.getSELL_LIMIT();
+            double maxShiftPrice = Math.min(marketData_1.getMAX_PRICE_SHIFT(), marketData_2.getMAX_PRICE_SHIFT());
+            double bidPrice = (marketData_1.getBID_PRICE() + marketData_2.getBID_PRICE())/2;
+            double askPrice = (marketData_1.getASK_PRICE() + marketData_2.getASK_PRICE())/2;
+            leastBidPrice = bidPrice - maxShiftPrice;
+            maxBidPrice = bidPrice + maxShiftPrice;
+            leastAskPrice = askPrice - maxShiftPrice;
+            maxAskPrice = askPrice + maxShiftPrice;
+        }
+
+
+
+
         // TODO Check BidPrice in the validation
         if (request.getSide().equals("BUY")) {
             if (balance != 0 && (request.getPrice() * request.getQuantity()) <= balance) {
-                if (marketData != null) {
-                    if (marketData.getBuyLimit() > 0) {
-                        if (request.getQuantity() < marketData.getBuyLimit()) {
-                            Orders orders = new Orders();
-                            orders.setStatus("OPEN");
-                            orders.setSide(request.getSide());
-                            orders.setProduct(request.getProduct());
-                            orders.setCreatedAt(LocalDateTime.now());
-                            orders.setPrice(request.getPrice());
-                            orders.setQuantity(request.getQuantity());
-                            orders.setPortfolio(portfolioService.getPortfolio((long) request.getPortfolioId()));
-                            orderService.createOrders(orders);
+                if (marketData_1 != null && marketData_2 != null) {
+                    if (buyLimit > 0) {
+                        if (request.getQuantity() <= buyLimit) {
+                            if(request.getPrice()>=leastBidPrice && request.getPrice()<=maxBidPrice){
+                                Orders orders = new Orders();
+                                orders.setStatus("OPEN");
+                                orders.setSide(request.getSide());
+                                orders.setProduct(request.getProduct());
+                                orders.setCreatedAt(LocalDateTime.now());
+                                orders.setPrice(request.getPrice());
+                                orders.setQuantity(request.getQuantity());
+                                orders.setPortfolio(portfolioService.getPortfolio((long) request.getPortfolioId()));
+                                orderService.createOrders(orders);
 
-                            Double valueOfOrder = request.getQuantity() * request.getPrice();
-                            Map<String, Long> variables = new HashMap<>();
-                            variables.put("portfolioId", (long) request.getPortfolioId());
+                                Double valueOfOrder = request.getQuantity() * request.getPrice();
+                                Map<String, Long> variables = new HashMap<>();
+                                variables.put("portfolioId", (long) request.getPortfolioId());
 
-                            restTemplate.put(
-                                    Optional.ofNullable(env.getProperty("app.client_connectivity_service_url"))
-                                            .orElse("").concat("/portfolio/update-balance/{portfolioId}"),
-                                    valueOfOrder, variables);
+                                restTemplate.put(
+                                        Optional.ofNullable(env.getProperty("app.client_connectivity_service_url"))
+                                                .orElse("").concat("/portfolio/update-balance/{portfolioId}"),
+                                        valueOfOrder, variables);
 
-                            try {
-                                Jedis client = new Jedis(env.getProperty("app.SPRING_REDIS_URI"));
+                                try {
+                                    Jedis client = new Jedis(env.getProperty("app.SPRING_REDIS_URI"));
 
-                                client.publish("orders", objectMapper.writeValueAsString(orders));
-                            } catch (Exception e) {
-                                e.printStackTrace();
+                                    client.publish("orders", objectMapper.writeValueAsString(orders));
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                                response.setIsOrderValid(true);
+                                response.setMessage("Client order is valid");
                             }
-                            response.setIsOrderValid(true);
-                            response.setMessage("Client order is valid");
                         } else {
                             response.setIsOrderValid(false);
                             response.setMessage("Your requested quantity is greater than the buy limit");
@@ -118,51 +169,57 @@ public class ClientOrdersService {
         }
 
         if (request.getSide().equals("SELL")) {
-            assert stockList != null;
-            OwnedStock stock = stockList.getOwnedStockList().stream()
-                    .filter(ownedStock -> ownedStock.getTicker().equals(request.getProduct())).findFirst().orElse(null);
-            if (stock != null) {
-                if (marketData.getSellLimit() > 0) {
-                    if (request.getQuantity() < marketData.getSellLimit()) {
+            if(stockList!=null){
+                OwnedStock stock = stockList.getOwnedStockList().stream()
+                        .filter(ownedStock -> ownedStock.getTicker().equals(request.getProduct())).findFirst().orElse(null);
+                if (stock != null) {
+                    if (sellLimit > 0) {
+                        if (request.getQuantity() <= sellLimit && request.getQuantity()<= stock.getQuantity()) {
+                            if(request.getPrice()>=leastAskPrice && request.getPrice()<=maxAskPrice){
+                                // TODO Push order to Trade Engine via Content Pub/Sub
+                                Orders orders = new Orders();
+                                orders.setStatus("OPEN");
+                                orders.setSide(request.getSide());
+                                orders.setProduct(request.getProduct());
+                                orders.setCreatedAt(LocalDateTime.now());
+                                orders.setPrice(request.getPrice());
+                                orders.setQuantity(request.getQuantity());
+                                orders.setPortfolio(portfolioService.getPortfolio((long) request.getPortfolioId()));
+                                orderService.createOrders(orders);
 
-                        // TODO Push order to Trade Engine via Content Pub/Sub
-                        Orders orders = new Orders();
-                        orders.setStatus("OPEN");
-                        orders.setSide(request.getSide());
-                        orders.setProduct(request.getProduct());
-                        orders.setCreatedAt(LocalDateTime.now());
-                        orders.setPrice(request.getPrice());
-                        orders.setQuantity(request.getQuantity());
-                        orders.setPortfolio(portfolioService.getPortfolio((long) request.getPortfolioId()));
-                        orderService.createOrders(orders);
+                                Map<String, Object> variables = new HashMap<>();
+                                variables.put("portfolioId", (long) request.getPortfolioId());
+                                variables.put("product", request.getProduct());
 
-                        Map<String, Object> variables = new HashMap<>();
-                        variables.put("portfolioId", (long) request.getPortfolioId());
-                        variables.put("product", request.getProduct());
+                                restTemplate.put(
+                                        Optional.ofNullable(env.getProperty("app.client_connectivity_service_url")).orElse("")
+                                                .concat("/portfolio/update-stock/{portfolioId}/{product}"),
+                                        request.getQuantity(), variables);
 
-                        restTemplate.put(
-                                Optional.ofNullable(env.getProperty("app.client_connectivity_service_url")).orElse("")
-                                        .concat("/portfolio/update-stock/{portfolioId}/{product}"),
-                                request.getQuantity(), variables);
+                                try {
+                                    Jedis client = new Jedis(
+                                            Optional.ofNullable(env.getProperty("app.SPRING_REDIS_URI")).orElse(""));
+                                    client.publish("orders", objectMapper.writeValueAsString(orders));
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                                response.setIsOrderValid(true);
+                                response.setMessage("Client order is valid");
+                            }
 
-                        try {
-                            Jedis client = new Jedis(
-                                Optional.ofNullable(env.getProperty("app.SPRING_REDIS_URI")).orElse(""));
-                            client.publish("orders", objectMapper.writeValueAsString(orders));
-                        } catch (Exception e) {
-                            e.printStackTrace();
+                        } else {
+                            response.setIsOrderValid(false);
+                            response.setMessage("You cannot sell more than " + request.getQuantity());
                         }
-                        response.setIsOrderValid(true);
-                        response.setMessage("Client order is valid");
                     } else {
                         response.setIsOrderValid(false);
-                        response.setMessage("You cannot sell more than " + request.getQuantity());
+                        response.setMessage("You cannot sell here");
                     }
                 } else {
                     response.setIsOrderValid(false);
-                    response.setMessage("You cannot sell here");
+                    response.setMessage("You don't have this product on your portfolio");
                 }
-            } else {
+            }else{
                 response.setIsOrderValid(false);
                 response.setMessage("You don't have this product on your portfolio");
             }
