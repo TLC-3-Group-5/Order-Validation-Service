@@ -17,9 +17,7 @@ import org.springframework.web.client.RestTemplate;
 import redis.clients.jedis.Jedis;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class ClientOrdersService {
@@ -102,13 +100,43 @@ public class ClientOrdersService {
         if(marketData_1!=null && marketData_2!=null){
             buyLimit = marketData_1.getBUY_LIMIT() + marketData_2.getBUY_LIMIT();
             sellLimit = marketData_1.getSELL_LIMIT() + marketData_2.getSELL_LIMIT();
-            double maxShiftPrice = Math.min(marketData_1.getMAX_PRICE_SHIFT(), marketData_2.getMAX_PRICE_SHIFT());
-            double bidPrice = (marketData_1.getBID_PRICE() + marketData_2.getBID_PRICE())/2;
-            double askPrice = (marketData_1.getASK_PRICE() + marketData_2.getASK_PRICE())/2;
-            leastBidPrice = bidPrice - maxShiftPrice;
-            maxBidPrice = bidPrice + maxShiftPrice;
-            leastAskPrice = askPrice - maxShiftPrice;
-            maxAskPrice = askPrice + maxShiftPrice;
+
+//            double maxShiftPrice = Math.min(marketData_1.getMAX_PRICE_SHIFT(), marketData_2.getMAX_PRICE_SHIFT());
+//            double bidPrice = (marketData_1.getBID_PRICE() + marketData_2.getBID_PRICE())/2;
+//            double askPrice = (marketData_1.getASK_PRICE() + marketData_2.getASK_PRICE())/2;
+//            leastBidPrice = bidPrice - maxShiftPrice;
+//            maxBidPrice = bidPrice + maxShiftPrice;
+//            leastAskPrice = askPrice - maxShiftPrice;
+//            maxAskPrice = askPrice + maxShiftPrice;
+
+            List<Double> askPrices = new ArrayList<>();
+            // Add min askPrice of exchange 1
+            askPrices.add(marketData_1.getASK_PRICE() - marketData_1.getMAX_PRICE_SHIFT());
+            // Add max askPrice of exchange 1
+            askPrices.add(marketData_1.getASK_PRICE() + marketData_1.getMAX_PRICE_SHIFT());
+            // Add min askPrice of exchange 2
+            askPrices.add(marketData_2.getASK_PRICE() - marketData_2.getMAX_PRICE_SHIFT());
+            // Add max askPrice of exchange 2
+            askPrices.add(marketData_2.getASK_PRICE() + marketData_2.getMAX_PRICE_SHIFT());
+            // The least askPrice
+            leastAskPrice = askPrices.stream().mapToDouble(v->v).min().orElse(0);
+            // The max askPrice
+            maxAskPrice = askPrices.stream().mapToDouble(v->v).max().orElse(0);
+
+            // We do same for our bid price
+            List<Double> bidPrices = new ArrayList<>();
+            // Add min bidPrices of exchange 1
+            bidPrices.add(marketData_1.getBID_PRICE() - marketData_1.getMAX_PRICE_SHIFT());
+            // Add max bidPrices of exchange 1
+            bidPrices.add(marketData_1.getBID_PRICE() + marketData_1.getMAX_PRICE_SHIFT());
+            // Add min bidPrices of exchange 2
+            bidPrices.add(marketData_2.getBID_PRICE() - marketData_2.getMAX_PRICE_SHIFT());
+            // Add max bidPrices of exchange 2
+            bidPrices.add(marketData_2.getBID_PRICE() + marketData_2.getMAX_PRICE_SHIFT());
+            // The least bidPrices
+            leastBidPrice = bidPrices.stream().mapToDouble(v->v).min().orElse(0);
+            // The max bidPrices
+            maxBidPrice = bidPrices.stream().mapToDouble(v->v).max().orElse(0);
         }
 
 
@@ -120,7 +148,7 @@ public class ClientOrdersService {
                 if (marketData_1 != null && marketData_2 != null) {
                     if (buyLimit > 0) {
                         if (request.getQuantity() <= buyLimit) {
-                            if(request.getPrice()>=leastBidPrice && request.getPrice()<=maxBidPrice){
+                            if(request.getPrice()>=leastAskPrice && request.getPrice()<=maxAskPrice){
                                 Orders orders = new Orders();
                                 orders.setStatus("OPEN");
                                 orders.setSide(request.getSide());
@@ -175,7 +203,7 @@ public class ClientOrdersService {
                 if (stock != null) {
                     if (sellLimit > 0) {
                         if (request.getQuantity() <= sellLimit && request.getQuantity()<= stock.getQuantity()) {
-                            if(request.getPrice()>=leastAskPrice && request.getPrice()<=maxAskPrice){
+                            if(request.getPrice()>=leastBidPrice && request.getPrice()<=maxBidPrice){
                                 // TODO Push order to Trade Engine via Content Pub/Sub
                                 Orders orders = new Orders();
                                 orders.setStatus("OPEN");
