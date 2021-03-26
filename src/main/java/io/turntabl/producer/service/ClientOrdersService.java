@@ -112,15 +112,13 @@ public class ClientOrdersService {
         }
 
 
-
-
         // TODO Check BidPrice in the validation
         if (request.getSide().equals("BUY")) {
             if (balance != 0 && (request.getPrice() * request.getQuantity()) <= balance) {
                 if (marketData_1 != null && marketData_2 != null) {
                     if (buyLimit > 0) {
                         if (request.getQuantity() <= buyLimit) {
-                            if(request.getPrice()>=leastBidPrice && request.getPrice()<=maxBidPrice){
+                            if(request.getPrice()>=leastAskPrice && request.getPrice()<=maxAskPrice){
                                 Orders orders = new Orders();
                                 orders.setStatus("OPEN");
                                 orders.setSide(request.getSide());
@@ -149,6 +147,8 @@ public class ClientOrdersService {
                                 }
                                 response.setIsOrderValid(true);
                                 response.setMessage("Client order is valid");
+                            }else{
+                                response.setMessage("The price is not reasonable");
                             }
                         } else {
                             response.setIsOrderValid(false);
@@ -175,7 +175,7 @@ public class ClientOrdersService {
                 if (stock != null) {
                     if (sellLimit > 0) {
                         if (request.getQuantity() <= sellLimit && request.getQuantity()<= stock.getQuantity()) {
-                            if(request.getPrice()>=leastAskPrice && request.getPrice()<=maxAskPrice){
+                            if(request.getPrice()>=leastBidPrice && request.getPrice()<=maxBidPrice){
                                 // TODO Push order to Trade Engine via Content Pub/Sub
                                 Orders orders = new Orders();
                                 orders.setStatus("OPEN");
