@@ -115,7 +115,7 @@ public class ClientOrdersService {
         // TODO Check BidPrice in the validation
         if (request.getSide().equals("BUY")) {
             if (balance != 0 && (request.getPrice() * request.getQuantity()) <= balance) {
-                if (marketData_1 != null && marketData_2 != null) {
+                if (marketData_1 != null && marketData_2 != null && (marketData_1.getASK_PRICE()+marketData_2.getASK_PRICE())!=0) {
                     if (buyLimit > 0) {
                         if (request.getQuantity() <= buyLimit) {
                             if(request.getPrice()>=leastAskPrice && request.getPrice()<=maxAskPrice){
