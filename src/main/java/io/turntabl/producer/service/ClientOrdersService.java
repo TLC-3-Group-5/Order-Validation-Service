@@ -91,20 +91,20 @@ public class ClientOrdersService {
         }
 
         ExchangeMarketData marketData_2 = null;
-        try {
-            marketData_2 = objectMapper
-                    .readValue(restTemplate.getForObject(exchangeTwoMarketData.concat(request.getProduct()), String.class),
-                            ExchangeMarketData.class);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            marketData_2 = objectMapper
+//                    .readValue(restTemplate.getForObject(exchangeTwoMarketData.concat(request.getProduct()), String.class),
+//                            ExchangeMarketData.class);
+//        } catch (JsonProcessingException e) {
+//            e.printStackTrace();
+//        }
 
-        if(marketData_1!=null && marketData_2!=null){
-            buyLimit = marketData_1.getBUY_LIMIT() + marketData_2.getBUY_LIMIT();
-            sellLimit = marketData_1.getSELL_LIMIT() + marketData_2.getSELL_LIMIT();
-            double maxShiftPrice = Math.min(marketData_1.getMAX_PRICE_SHIFT(), marketData_2.getMAX_PRICE_SHIFT());
-            double bidPrice = (marketData_1.getBID_PRICE() + marketData_2.getBID_PRICE())/2;
-            double askPrice = (marketData_1.getASK_PRICE() + marketData_2.getASK_PRICE())/2;
+        if(marketData_1!=null){
+            buyLimit = marketData_1.getBUY_LIMIT();
+            sellLimit = marketData_1.getSELL_LIMIT();
+            double maxShiftPrice = marketData_1.getMAX_PRICE_SHIFT();
+            double bidPrice = marketData_1.getBID_PRICE();
+            double askPrice = marketData_1.getASK_PRICE();
             leastBidPrice = bidPrice - maxShiftPrice;
             maxBidPrice = bidPrice + maxShiftPrice;
             leastAskPrice = askPrice - maxShiftPrice;
@@ -115,7 +115,7 @@ public class ClientOrdersService {
         // TODO Check BidPrice in the validation
         if (request.getSide().equals("BUY")) {
             if (balance != 0 && (request.getPrice() * request.getQuantity()) <= balance) {
-                if (marketData_1 != null && marketData_2 != null && (marketData_1.getASK_PRICE()+marketData_2.getASK_PRICE())!=0) {
+                if (marketData_1 != null && marketData_1.getASK_PRICE()!=0) {
                     if (buyLimit > 0) {
                         if (request.getQuantity() <= buyLimit) {
                             if(request.getPrice()>=leastAskPrice && request.getPrice()<=maxAskPrice){
